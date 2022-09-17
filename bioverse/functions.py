@@ -765,7 +765,7 @@ def Example2_oxygen(d, f_life=0.7, t_half=2.3, seed=42):
     return d
 
 
-def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., water_incorp=True):
+def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., simplified=False, water_incorp=True):
     """Assign a fraction of planets global magma oceans that change the planet's radius.
 
     Parameters:
@@ -779,6 +779,8 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., water_incorp=T
         Possible values: [0.0001, 0.001 , 0.005 , 0.01  , 0.02  , 0.03  , 0.04  , 0.05  ] (default: 0.05 = 5% water)
     S_thresh : float, optional
         threshold instellation for runaway greenhouse phase
+    simplified : bool, optional
+        increase the radii of all runaway greenhouse planets by the same fraction
     water_incorp : bool, optional
         wether or not to consider water incorporation in the melt of global magma oceans (Dorn & Lichtenberg 2021)
 
@@ -799,16 +801,24 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., water_incorp=T
 
     # Second, change properties of planets with magma oceans
     if gh_increase:
-        # radius increase due to runaway greenhouse effect (Turbet+2020)
-        turbet2020 = pd.read_csv(DATA_DIR+'mass-radius_relationships_STEAM_TURBET2020_FIG2b.dat', comment='#')
-        mass_radius = turbet2020[turbet2020.wrr == wrr]
+        if simplified:
+            # increase all runaway GH planet radii by 54%, the average of the more sophisticated approach below.
+            R = d['R']
+            mask = d['runaway_gh']
+            R[mask] = R[mask] * 1.54
+            d['R'] = R
 
-        # for runaway GH planets from 0.1 Mearth to 2.0 Mearth, interpolate in Turbet+2020 mass-radius relationship,
-        # assign planets a new radius based on their mass
-        R = d['R']
-        mask = d['runaway_gh'] & ((d['M'] > min(turbet2020.mass)) & (d['M'] < max(turbet2020.mass)))
-        R[mask] = interpolate_df(d['M'][mask], mass_radius, 'mass', 'radius')
-        d['R'] = R
+        else:
+            # radius increase due to runaway greenhouse effect (Turbet+2020)
+            turbet2020 = pd.read_csv(DATA_DIR+'mass-radius_relationships_STEAM_TURBET2020_FIG2b.dat', comment='#')
+            mass_radius = turbet2020[turbet2020.wrr == wrr]
+
+            # for runaway GH planets from 0.1 Mearth to 2.0 Mearth, interpolate in Turbet+2020 mass-radius relationship,
+            # assign planets a new radius based on their mass
+            R = d['R']
+            mask = d['runaway_gh'] & ((d['M'] > min(turbet2020.mass)) & (d['M'] < max(turbet2020.mass)))
+            R[mask] = interpolate_df(d['M'][mask], mass_radius, 'mass', 'radius')
+            d['R'] = R
 
 
 
