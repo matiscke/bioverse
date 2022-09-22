@@ -401,7 +401,7 @@ def magma_ocean_f0(theta, X):
     """
     return np.full(np.shape(X), theta)
 
-def magma_ocean_hypo(theta, X, gh_increase=True, simplified=True):
+def magma_ocean_hypo(theta, X, gh_increase=True, water_incorp=True, simplified=True, dR_frac=-0.10):
     """ Define a hypothesis for a magma ocean-adapted radius-sma distribution following a step function.
 
     Parameters
@@ -416,6 +416,12 @@ def magma_ocean_hypo(theta, X, gh_increase=True, simplified=True):
         Independent variable. Includes effective semimajor axis a_eff.
     gh_increase : bool, optional
         wether or not to consider radius increase due to runaway greenhouse effect (Turbet+2020)
+    water_incorp : bool, optional
+        wether or not to consider water incorporation in the melt of global magma oceans (Dorn & Lichtenberg 2021)
+    simplified : bool, optional
+        change the radii of all runaway greenhouse planets by the same fraction
+    dR_frac : float, optional
+        fractional radius change in the simplified case. E.g., dR_frac = -0.10 is a 10% decrease in radius.
 
     Returns
     -------
@@ -429,7 +435,7 @@ def magma_ocean_hypo(theta, X, gh_increase=True, simplified=True):
         if simplified:
             # beyond S_thresh: R_avg. Within S_thresh: increased R_avg
             a_eff_thresh = 1/(np.sqrt(S_thresh/CONST['S_Earth']))
-            return (R_avg * 1.54) * (a_eff < a_eff_thresh) + R_avg * (a_eff >= a_eff_thresh)
+            return (R_avg * (1 + dR_frac)) * (a_eff < a_eff_thresh) + R_avg * (a_eff >= a_eff_thresh)
 
     else:
         return None

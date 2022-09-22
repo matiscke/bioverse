@@ -775,10 +775,10 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., simplified=Fal
     gh_increase : bool, optional
         wether or not to consider radius increase due to runaway greenhouse effect (Turbet+2020)
     wrr : float, optional
-        water-to-rock ratio for Turbet+2020 model.
+        water-to-rock ratio for Turbet+2020 model. Defines the amount of radius increase due to a steam atmosphere.
         Possible values: [0.0001, 0.001 , 0.005 , 0.01  , 0.02  , 0.03  , 0.04  , 0.05  ] (default: 0.05 = 5% water)
     S_thresh : float, optional
-        threshold instellation for runaway greenhouse phase
+        threshold instellation for runaway greenhouse phase (in W/m2)
     simplified : bool, optional
         increase the radii of all runaway greenhouse planets by the same fraction
     water_incorp : bool, optional
@@ -801,6 +801,7 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., simplified=Fal
 
     # Second, change properties of planets with magma oceans
     if gh_increase:
+        # radius increase due to runaway greenhouse effect (Turbet+2020)
         if simplified:
             # increase all runaway GH planet radii by 54%, the average of the more sophisticated approach below.
             R = d['R']
@@ -809,7 +810,6 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., simplified=Fal
             d['R'] = R
 
         else:
-            # radius increase due to runaway greenhouse effect (Turbet+2020)
             turbet2020 = pd.read_csv(DATA_DIR+'mass-radius_relationships_STEAM_TURBET2020_FIG2b.dat', comment='#')
             mass_radius = turbet2020[turbet2020.wrr == wrr]
 
@@ -822,9 +822,28 @@ def magma_ocean_NEW(d, gh_increase=True, wrr=0.01, S_thresh=280., simplified=Fal
 
 
 
+
     # reduce the radius of the planets with magma oceans according to Dorn & Lichtenberg (2021)
     if water_incorp:
-        pass
+        if simplified:
+            # decrease all runaway GH planet radii by 10%.
+            R = d['R']
+            mask = d['runaway_gh']
+            R[mask] = R[mask] * .90
+            d['R'] = R
+
+        else:
+            # TODO: Implement water-and mass-dependent radius reduction (Dorn & Lichtenberg 2021)
+            pass
+
+
+    # compute bulk density again, based on new radii
+    d['rho'] = CONST['rho_Earth']*d['M']/d['R']**3
+
+    # Label planets with smaller radius than the average
+    d['is_small'] = d['R'] < np.mean(d['R_orig'])
+
+
 
 
     # mask = d['has_magmaocean']
