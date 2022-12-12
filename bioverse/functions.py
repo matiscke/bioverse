@@ -49,7 +49,7 @@ def luminosity_evolution(d):
 
 
 def read_stars_Gaia(d, filename='gcns_catalog.dat', d_max=120., M_st_min=0.075, M_st_max=2.0, R_st_min=0.095,
-                    R_st_max=2.15, T_min=0., T_max=10., inc_binary=0, seed=42, lum_evo=True):  # , mult=0):
+                    R_st_max=2.15, T_min=0., T_max=10., inc_binary=0, seed=42, M_G_max=None, lum_evo=True):  # , mult=0):
     """ Reads a list of stellar properties from the Gaia nearby stars catalog.
 
     Parameters
@@ -78,6 +78,8 @@ def read_stars_Gaia(d, filename='gcns_catalog.dat', d_max=120., M_st_min=0.075, 
         seed for the random number generators.
     mult : float, optional
         Multiple on the total number of stars simulated. If > 1, duplicates some entries from the LUVOIR catalog.
+    M_G_max : float, optional
+        Maximum Gaia magnitude of stars. Example: M_G_max=9. keeps all stars brighter than M_G = 9.0.
     lum_evo : bool, optional
         Assign age-dependent stellar luminosities (based on randomly assigned ages and stellar luminosity tracks in
         Baraffe et al. 1998.
@@ -114,6 +116,10 @@ def read_stars_Gaia(d, filename='gcns_catalog.dat', d_max=120., M_st_min=0.075, 
 
     # Enforce a maximum distance
     d = d[d['d'] < d_max]
+
+    # Apply magnitude limit
+    if M_G_max:
+        d = d[d['M_G'] < M_G_max]
 
     # Enforce a min/max mass & radius
     d = d[(d['M_st'] < M_st_max) & (d['M_st'] > M_st_min)]
@@ -845,6 +851,37 @@ def compute_transit_params(d):
     d['depth'] = (Rp/Rs)**2
 
     return d
+
+
+def apply_bias(d, M_min=0., M_max=np.inf, S_min=0., S_max=np.inf, depth_min=0.):
+    """ Apply detection biases and custom selections to the sample to generate.
+
+    Parameters
+    ----------
+    d : Table
+        Table containing the sample of simulated planets.
+    M_min : float
+        Minimum planet mass in Mearth
+    M_max : float
+        Maximum planet mass in Mearth
+    S_min : float
+        Minimum absolute instellation in W/m2
+    S_max : float
+        Maximum absolute instellation in W/m2
+    depth_min : float
+        Minimum transit depth
+
+    Returns
+    -------
+    d : Table
+        Table containing the new sample after applying the cuts.
+    """
+    d = d[d.to_pandas()['M'].between(M_min, M_max).values]
+    d = d[d.to_pandas()['S_abs'].between(S_min, S_max).values]
+    d = d[d['depth'] > depth_min]
+
+    return d
+
 
 def Example1_water(d, f_water_habitable=0.75, f_water_nonhabitable=0.1, minimum_size=True, seed=42):
     """ Determines which planets have water, according to the following model:
